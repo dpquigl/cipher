@@ -1,0 +1,25 @@
+# ===== Rust build output =====
+target/
+Cargo.lock
+
+# ===== Git internals =====
+.git/
+.gitignore
+
+# ===== Logs / temp =====
+*.log
+*.tmp
+*.cache
+
+# ===== OS junk =====
+.DS_Store
+Thumbs.db
+
+# ===== Large generated artifacts =====
+*.rlib
+*.rmeta
+*.profraw
+*.profdata
+
+# ===== VSCode =====
+.vscode
