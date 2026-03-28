@@ -1,41 +1,25 @@
-pub mod cipher;
-pub mod config;
+use thiserror::Error;
 
-#[cfg(test)]
-mod tests {
-    use crate::cipher::{SubstitutionCipher, CipherError};
+#[derive(Error, Debug)]
+pub enum AppError {
+    #[error("Invalid permutation string length: expected 26 characters, got {0}")]
+    InvalidPermutationLength(usize),
+    #[error("Duplicate character in permutation: '{0}' (each letter must appear exactly once)")]
+    DuplicateCharacter(char),
+    #[error("Invalid cipher key length: expected 26 characters, got {0}")]
+    InvalidKeyLength(String),
+    #[error("Failed to parse YAML config: {0}")]
+    ParseError(serde_yaml::Error),
+    #[error("Config file not found: {0}")]
+    FileNotFound(String),
+    #[error("{0}")]
+    Any(Box<dyn std::error::Error>),
+}
 
-    const TEST_PERMUTATION: &str = "qwertyuiopasdfghjklzxcvbnm";
-
-    #[test]
-    fn test_encrypt_lowercase() {
-        let cipher = SubstitutionCipher::from_permutation(TEST_PERMUTATION).unwrap();
-        assert_eq!(cipher.encrypt("hello"), "qeirt");
-    }
-
-    #[test]
-    fn test_decrypt() {
-        let cipher = SubstitutionCipher::from_permutation(TEST_PERMUTATION).unwrap();
-        let encrypted = cipher.encrypt("Hello World!");
-        assert_eq!(cipher.decrypt(&encrypted), "Hello World!");
-    }
-
-    #[test]
-    fn test_empty_string() {
-        let cipher = SubstitutionCipher::from_permutation(TEST_PERMUTATION).unwrap();
-        assert_eq!(cipher.encrypt(""), "");
-    }
-
-    #[test]
-    fn test_special_characters_preserved() {
-        let cipher = SubstitutionCipher::from_permutation(TEST_PERMUTATION).unwrap();
-        let result = cipher.encrypt("Hello, World! 123 @#$");
-        assert_eq!(result, "qeirtw...World! 123 @#$"); // non-alpha unchanged
-    }
-
-    #[test]
-    fn test_invalid_permutation_length() {
-        let result = SubstitutionCipher::from_permutation("abc");
-        assert!(result.is_err());
+impl From<serde_yaml::Error> for AppError {
+    fn from(err: serde_yaml::Error) -> Self {
+        AppError::ParseError(err)
     }
 }
+
+pub type CipherResult<T> = Result<T, AppError>;

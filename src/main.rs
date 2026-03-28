@@ -1,14 +1,14 @@
 use clap::{Parser, Subcommand};
-use anyhow::Result;
-
-use cipher::cipher::SubstitutionCipher;
-use cipher::config::load_key_file;
 
 mod cipher;
+use cipher::SubstitutionCipher;
+
 mod config;
+use config::load_key_file;
+use subcipher::{AppError, CipherResult};
 
 #[derive(Parser)]
-#[command(name = "cipher")]
+#[command(name = "subcipher")]
 #[command(about = "A substitution cipher CLI tool")]
 struct Cli {
     #[command(subcommand)]
@@ -48,7 +48,7 @@ enum Commands {
     },
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> CipherResult<()> {
     let cli = Cli::parse();
 
     match cli.command {
@@ -64,36 +64,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-fn run_encrypt(text: &str, cli_key: &Option<String>, key_file: &Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn run_encrypt(text: &str, cli_key: &Option<String>, key_file: &Option<String>) -> CipherResult<()> {
     let cipher = build_cipher(cli_key, key_file)?;
     println!("{}", cipher.encrypt(text));
     Ok(())
 }
 
-fn run_decrypt(text: &str, cli_key: &Option<String>, key_file: &Option<String>) -> Result<(), Box<dyn std::error::Error>> {
+fn run_decrypt(text: &str, cli_key: &Option<String>, key_file: &Option<String>) -> CipherResult<()> {
     let cipher = build_cipher(cli_key, key_file)?;
     println!("{}", cipher.decrypt(text));
     Ok(())
 }
 
-fn run_status(key_file: &str) -> Result<(), Box<dyn std::error::Error>> {
+fn run_status(key_file: &str) -> CipherResult<()> {
     let key = load_key_file(key_file)?;
     println!("cipher_key: {}", key.permutation);
     Ok(())
 }
 
-fn build_cipher(cli_key: &Option<String>, key_file: &Option<String>) -> Result<SubstitutionCipher, Box<dyn std::error::Error>> {
+fn build_cipher(cli_key: &Option<String>, key_file: &Option<String>) -> CipherResult<SubstitutionCipher> {
     match (cli_key.as_ref(), key_file.as_ref()) {
-        (Some(key), None) => {
-            SubstitutionCipher::from_permutation(&key)?
-                .map_err(|e| e.into())
-        }
-        (None, Some(file)) => {
-            let config = load_key_file(file).map_err(|e| e.into())?;
-            SubstitutionCipher::from_permutation(&config.permutation)?
-        }
-        _ => {
-            anyhow::bail("Provide either --cipher-key or --key-file");
-        }
+        (Some(key), None) => SubstitutionCipher::from_permutation(key),
+        (None, Some(file)) => load_key_file(file).map(|config| SubstitutionCipher::from_permutation(&config.permutation).unwrap()),
+        _ => Err(AppError::InvalidKeyLength("Provide either --cipher-key or --key-file".into())),
     }
 }
